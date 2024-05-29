@@ -1,7 +1,7 @@
 module Quoridor
 
 export greet_your_package_name
-export GameState
+include("graph_structure.jl")
 include("functions.jl")
-include("game_structure.jl")
+#include("game_structure.jl")
 end

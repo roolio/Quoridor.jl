@@ -52,6 +52,35 @@ function GameState()
     return GameState(walls, players, turn, barriers)
 end
 
+
+function move_pawn(state::GameState, id::Int8, new_id::Int8)
+    # move the pawn from id to new_id
+    if is_valid_move(state, id, new_id)
+        state.players[state.turn] = new_id
+        state.turn = state.turn == White ? Black : White
+    end
+end
+
+function place_barrier(state::GameState, id::Int8, barrier_type::Barrier_type)
+    # place a barrier at id
+    row, col = barrierId2RowCol(id)
+    if barrier_type == Horizontal
+        if state.walls[row, col] == 0 && state.walls[row, col+1] == 0
+            state.walls[row, col] = 1
+            state.walls[row, col+1] = 1
+            state.barriers[state.turn] -= 1
+            state.turn = state.turn == White ? Black : White
+        end
+    else
+        if state.walls[row, col] == 0 && state.walls[row+1, col] == 0
+            state.walls[row, col] = 2
+            state.walls[row+1, col] = 2
+            state.barriers[state.turn] -= 1
+            state.turn = state.turn == White ? Black : White
+        end
+    end
+end
+
 function barrierId2RowCol(id::Int8)
     #throw an error if id > 2*BOARD_SIZE*(BOARD_SIZE-1)
     if id > (BOARD_SIZE-1)^2
@@ -70,3 +99,64 @@ function pawnId2RowCol(id::Int8)
     row = ((id - col) / BOARD_SIZE) + 1
     return (Int8(row),Int8(col))
 end
+
+function neighbours(id::Int8)
+    # return the neighbours of a pawn (in the form of ids)
+    row, col = pawnId2RowCol(id)
+    neighbours = []
+    if row > 1
+        push!(neighbours, id - BOARD_SIZE)
+    end
+    if row < BOARD_SIZE
+        push!(neighbours, id + BOARD_SIZE)
+    end
+    if col > 1
+        push!(neighbours, id - 1)
+    end
+    if col < BOARD_SIZE
+        push!(neighbours, id + 1)
+    end
+    return neighbours
+end
+
+function is_valid_move(state::GameState, id::Int8, new_id::Int8)
+    # check if the move is valid
+    # check if the new_id is a neighbour of id
+    if new_id in neighbours(id)
+        # check if the new_id is not occupied by a pawn
+        if new_id in values(state.players)
+            return false
+        end
+        # check if the new_id is not occupied by a barrier
+        row, col = pawnId2RowCol(new_id)
+        if row == BOARD_SIZE
+            if state.walls[row-1, col] == 1
+                return false
+            end
+        elseif row == 1
+            if state.walls[row, col] == 1
+                return false
+            end
+        elseif col == BOARD_SIZE
+            if state.walls[row, col-1] == 2
+                return false
+            end
+        elseif col == 1
+            if state.walls[row, col] == 2
+                return false
+            end
+        else
+            if state.walls[row, col] == 1 && state.walls[row-1, col] == 1
+                return false
+            end
+            if state.walls[row, col] == 2 && state.walls[row, col-1] == 2
+                return false
+            end
+        end
+
+        return true
+    end
+    return false
+end
+
+
