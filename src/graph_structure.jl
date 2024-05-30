@@ -75,14 +75,35 @@ function GameState()
     return GameState(g, players, turn, played_barriers,barriers)
 end
 
-function get_valid_moves(gs::GameState)
+
+function is_terminal(gs::GameState)
+    # check if the game is over
+    # a game is over if one of the player reach the opposite side
+    return gs.players[White] in winning_positions[White] || gs.players[Black] in winning_positions[Black]
+end
+
+function returns(gs::GameState)
+    # return the winner of the game
+    if gs.players[White] in winning_positions[White]
+        return [1 0]
+    elseif gs.players[Black] in winning_positions[Black]
+        return [0 1]
+    else
+        return [0 0]
+    end
+end
+
+
+function get_valid_pawn_moves(gs::GameState)
     # get valid moves for the current player
     # get Id of the current player
     cur_pos = gs.players[gs.turn]
+    g = gs.graph
     # get neighbors of the current player
-    potential = neighbors(gs.graph, cur_pos)
+    potential = neighbors(g, cur_pos)
     # check if other player in in neighbors
     # if yes, remove it
+
     other_player = gs.players[gs.turn == White ? Black : White]
     if other_player in potential
         # filter out other player position
@@ -159,6 +180,12 @@ function get_valid_barriers(gs::GameState)
 end
 
 
+function get_valid_moves(gs::GameState)
+    # get valid moves for the current player
+    # get Id of the current player
+    return vcat(get_valid_pawn_moves(gs), get_valid_barriers(gs))
+end
+
 
 
 function is_cutting_barrier(gs::GameState,g::MetaGraph)
@@ -187,14 +214,15 @@ function add_barrier!(gs::GameState, b::Barrier)
     # vertical barrier remove the edge between (i,j) and (i+1,j)
     # get the node Id of the upper left node of the barrier
     # so the eligible nodes are 1 to 8, 10 to 17, 19 to 26, 28 to 35, 37 to 44, 46 to 53, 55 to 62, 64 to 71
+    id = b.id
     if b.barrier_type == Horizontal
-        remove_edge!(gs.graph, id, id + BOARD_SIZE)
-        remove_edge!(gs.graph, id+1, id+BOARD_SIZE+1)
+        rem_edge!(gs.graph, id, id + BOARD_SIZE)
+        rem_edge!(gs.graph, id+1, id+BOARD_SIZE+1)
     elseif b.barrier_type == Vertical
-        remove_edge!(gs.graph, id, id+1)
-        remove_edge!(gs.graph, id+BOARD_SIZE, id+BOARD_SIZE+1)
+        rem_edge!(gs.graph, id, id+1)
+        rem_edge!(gs.graph, id+BOARD_SIZE, id+BOARD_SIZE+1)
     end
-    gs.played_barriers = vcat(gs.played_barriers, Barrier(id, barrier_type))
+    gs.played_barriers = vcat(gs.played_barriers, b)
     gs.barriers[gs.turn] -= 1
     gs.turn = gs.turn == White ? Black : White
 
